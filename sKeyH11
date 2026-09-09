@@ -1,0 +1,168 @@
+-- Hosted on GitHub Raw: hub.lua
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
+local player = Players.LocalPlayer
+
+-- Configure your valid keys and expiration dates here ("YYYY-MM-DD" or "never")
+local validKeys = {
+    ["MY-TEST-KEY-1"] = { expires = "2030-01-01", maxUses = 1, currentUses = 0 },
+    ["VIP-LIFETIME-KEY"] = { expires = "never", maxUses = 999, currentUses = 0 }
+}
+
+local KeyFileName = "DynamicHub_KeyCache.txt"
+
+local function launchHubPayload()
+    -- PUT YOUR ACTUAL SCRIPT HUB CODE OR UI HERE
+    print("Authentication successful! Loading script hub...")
+end
+
+local function showKeySystem()
+    local keyGui = Instance.new("ScreenGui")
+    keyGui.Name = "DynamicKeySystem"
+    keyGui.IgnoreGuiInset = true
+    keyGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+    keyGui.DisplayOrder = 500
+    
+    if syn and syn.protect_gui then
+        syn.protect_gui(keyGui)
+        keyGui.Parent = CoreGui
+    elseif gethui then
+        keyGui.Parent = gethui()
+    else
+        pcall(function() keyGui.Parent = CoreGui end)
+        if not keyGui.Parent then keyGui.Parent = player:WaitForChild("PlayerGui") end
+    end
+    
+    local keyFrame = Instance.new("Frame")
+    keyFrame.Size = UDim2.new(0, 380, 0, 170)
+    keyFrame.Position = UDim2.new(0.5, -190, 0.5, -85)
+    keyFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+    keyFrame.BackgroundTransparency = 0.05
+    keyFrame.BorderSizePixel = 0
+    keyFrame.ZIndex = 20
+    keyFrame.Parent = keyGui
+    
+    local kCorner = Instance.new("UICorner")
+    kCorner.CornerRadius = UDim.new(0, 6)
+    kCorner.Parent = keyFrame
+    
+    local kStroke = Instance.new("UIStroke")
+    kStroke.Color = Color3.fromRGB(45, 45, 55)
+    kStroke.Thickness = 1
+    kStroke.Parent = keyFrame
+    
+    local kTitle = Instance.new("TextLabel")
+    kTitle.Size = UDim2.new(1, -60, 0, 25)
+    kTitle.Position = UDim2.new(0, 15, 0, 18)
+    kTitle.BackgroundTransparency = 1
+    kTitle.Font = Enum.Font.Code
+    kTitle.Text = "AUTHENTICATION REQUIRED"
+    kTitle.TextColor3 = Color3.fromRGB(220, 220, 225)
+    kTitle.TextSize = 12
+    kTitle.TextXAlignment = Enum.TextXAlignment.Left
+    kTitle.ZIndex = 21
+    kTitle.Parent = keyFrame
+
+    local closeBtn = Instance.new("TextButton")
+    closeBtn.Size = UDim2.new(0, 25, 0, 25)
+    closeBtn.Position = UDim2.new(1, -30, 0, 16)
+    closeBtn.BackgroundColor3 = Color3.fromRGB(28, 28, 35)
+    closeBtn.BorderSizePixel = 0
+    closeBtn.Font = Enum.Font.Code
+    closeBtn.Text = "X"
+    closeBtn.TextColor3 = Color3.fromRGB(150, 150, 160)
+    closeBtn.TextSize = 12
+    closeBtn.ZIndex = 22
+    closeBtn.Parent = keyFrame
+
+    local closeCorner = Instance.new("UICorner")
+    closeCorner.CornerRadius = UDim.new(0, 4)
+    closeCorner.Parent = closeBtn
+
+    closeBtn.MouseButton1Click:Connect(function()
+        keyGui:Destroy()
+    end)
+    
+    local textBox = Instance.new("TextBox")
+    textBox.Size = UDim2.new(1, -30, 0, 36)
+    textBox.Position = UDim2.new(0, 15, 0, 52)
+    textBox.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+    textBox.BorderSizePixel = 0
+    textBox.Font = Enum.Font.Code
+    textBox.PlaceholderText = "Enter Access Key..."
+    textBox.Text = ""
+    textBox.TextColor3 = Color3.fromRGB(240, 240, 245)
+    textBox.PlaceholderColor3 = Color3.fromRGB(90, 90, 100)
+    textBox.TextSize = 12
+    textBox.ZIndex = 21
+    textBox.Parent = keyFrame
+    
+    local boxCorner = Instance.new("UICorner")
+    boxCorner.CornerRadius = UDim.new(0, 4)
+    boxCorner.Parent = textBox
+    
+    local submitBtn = Instance.new("TextButton")
+    submitBtn.Size = UDim2.new(0, 100, 0, 30)
+    submitBtn.Position = UDim2.new(1, -115, 0, 105)
+    submitBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+    submitBtn.BorderSizePixel = 0
+    submitBtn.Font = Enum.Font.GothamMedium
+    submitBtn.Text = "Verify"
+    submitBtn.TextColor3 = Color3.fromRGB(220, 220, 225)
+    submitBtn.TextSize = 12
+    submitBtn.ZIndex = 21
+    submitBtn.Parent = keyFrame
+    
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 4)
+    btnCorner.Parent = submitBtn
+    
+    local feedback = Instance.new("TextLabel")
+    feedback.Size = UDim2.new(1, -140, 0, 30)
+    feedback.Position = UDim2.new(0, 15, 0, 105)
+    feedback.BackgroundTransparency = 1
+    feedback.Font = Enum.Font.Gotham
+    feedback.Text = ""
+    feedback.TextColor3 = Color3.fromRGB(210, 90, 90)
+    feedback.TextSize = 11
+    feedback.TextXAlignment = Enum.TextXAlignment.Left
+    feedback.ZIndex = 21
+    feedback.Parent = keyFrame
+
+    submitBtn.MouseButton1Click:Connect(function()
+        local inputKey = textBox.Text
+        if inputKey == "" then
+            feedback.TextColor3 = Color3.fromRGB(210, 90, 90)
+            feedback.Text = "Key field cannot be empty."
+            return
+        end
+        
+        local keyData = validKeys[inputKey]
+        if keyData then
+            pcall(function() writefile(KeyFileName, inputKey) end)
+            feedback.TextColor3 = Color3.fromRGB(100, 210, 120)
+            feedback.Text = "Access granted."
+            task.wait(0.4)
+            keyGui:Destroy()
+            launchHubPayload()
+        else
+            feedback.TextColor3 = Color3.fromRGB(210, 90, 90)
+            feedback.Text = "Invalid access key."
+        end
+    end)
+end
+
+-- Session Cache Check
+local hasCachedKey = false
+if pcall(function() return readfile(KeyFileName) end) then
+    local cachedKey = readfile(KeyFileName)
+    if validKeys[cachedKey] then
+        hasCachedKey = true
+        launchHubPayload()
+    end
+end
+
+if not hasCachedKey then
+    showKeySystem()
+end
